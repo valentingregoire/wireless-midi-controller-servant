@@ -1,4 +1,5 @@
-from machine import UART, Pin
+import machine
+from machine import UART, Pin, ADC
 from utime import sleep_ms
 
 uart = UART(1, 31250, tx=18, rx=19)
@@ -41,3 +42,10 @@ scene2_bin = scene2.to_bytes(1, "big")
 program = 55
 uart.write(b"\xc0" + program.to_bytes(1, "big"))
 
+pot = ADC(Pin(33))
+pot.atten(ADC.ATTN_11DB)
+while True:
+    # van 0 tot en met 4095
+  pot_value = pot.read()
+  print(pot_value)
+  # sleep_ms(100)
