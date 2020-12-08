@@ -31,21 +31,28 @@ scene2_bin = scene2.to_bytes(1, "big")
 #     # # uart.write(b"\x37")
 #     # uart.write(command.to_bytes(1, "big"))
 #     # uart.write(var_127.to_bytes(1, "big"))
-#     var_127_bin = var_127.to_bytes(1, "big")
+# var_127_bin = var_127.to_bytes(1, "big")
 #     uart.write(b"\xb0" + scene1_bin + var_127_bin)
 #     sleep_ms(250)
-#     uart.write(b"\xb0" + scene2_bin + var_127_bin)
+# uart.write(b"\xb0" + scene2_bin + var_127_bin)
 #     sleep_ms(250)
 #     var_127 += 1
 #     led.value(1)
 #     # uart.write(b"\x7f")
 program = 55
-uart.write(b"\xc0" + program.to_bytes(1, "big"))
+# uart.write(b"\xc0" + program.to_bytes(1, "big"))
 
 pot = ADC(Pin(33))
 pot.atten(ADC.ATTN_11DB)
+previous_pot_value = -1
 while True:
     # van 0 tot en met 4095
-  pot_value = pot.read()
-  print(pot_value)
-  # sleep_ms(100)
+    pot_value = int(pot.read() / 32)
+    if previous_pot_value not in [pot_value - 1, pot_value, pot_value + 1]:
+        print(pot_value)
+        uart.write(b"\xb0")
+        uart.write((61).to_bytes(1, "big"))
+        uart.write(pot_value.to_bytes(1, "big"))
+        previous_pot_value = pot_value
+        # sleep_ms(10)
+    # sleep_ms(100)
