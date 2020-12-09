@@ -1,15 +1,38 @@
-import bluetooth
-import random
-import struct
+import _thread
 import time
-import micropython
+
+import bluetooth
+from machine import Pin
 from machine import UART
-
-from ble_advertising import decode_services, decode_name
-
 from micropython import const
+from network import WLAN
+from utime import sleep_ms
+
+from ble_advertising import decode_name
+from ble_advertising import decode_services
+
+WLAN(0).active(False)
+WLAN(1).active(False)
 
 _MIDI_TX_PIN = 19
+
+_STATUS_LED = Pin(13, Pin.OUT, Pin.PULL_UP)
+_STATUS_LED.value(0)
+
+
+_COMMAND_MAP = {
+    "button_rig_up": (49).to_bytes(1, "big"),
+    "button_rig_down": (55).to_bytes(1, "big"),
+    "button_scene1": (56).to_bytes(1, "big"),
+    "button_scene2": (57).to_bytes(1, "big"),
+    "button_scene3": (58).to_bytes(1, "big"),
+    "button_scene4": (59).to_bytes(1, "big"),
+    "button_tap_tempo": (60).to_bytes(1, "big")
+}
+
+_MIDI_MAX_VALUE_BYTES = b"FF"
+
+_UART = UART(1, 31250, tx=18, rx=19)
 
 _IRQ_CENTRAL_CONNECT = const(1)
 _IRQ_CENTRAL_DISCONNECT = const(2)
@@ -50,19 +73,27 @@ _ENV_SENSE_SERVICE = (
 )
 
 
-_COMMAND_MAP = {
-    "button_rig_up": (49).to_bytes(1, "big"),
-    "button_rig_down": (55).to_bytes(1, "big"),
-    "button_scene1": (56).to_bytes(1, "big"),
-    "button_scene2": (57).to_bytes(1, "big"),
-    "button_scene3": (58).to_bytes(1, "big"),
-    "button_scene4": (59).to_bytes(1, "big"),
-    "button_tap_tempo": (60).to_bytes(1, "big")
-}
+def __blink_led(status=1, times=1, interval=150) -> None:
+    """
+    Blinks the status led.
+    :param status:
+        1: blue
+        2: green
+        3: orange
+        4: red
+    :return:
+    """
 
-_MIDI_MAX_VALUE_BYTES = b"FF"
+    for _ in range(times):
+        _STATUS_LED.value(1)
+        sleep_ms(interval)
+        _STATUS_LED.value(0)
+        sleep_ms(75)
 
-_UART = UART(1, 31250, tx=18, rx=19)
+
+def blink_led(status=1, times=1, interval=100) -> None:
+    _thread.start_new_thread(__blink_led, (status, times, interval))
+    # __blink_led(status)
 
 
 class BLEHeadrushServant:
@@ -148,7 +179,7 @@ class BLEHeadrushServant:
                     self._conn_handle, self._start_handle, self._end_handle
                 )
             else:
-                print("Failed to find environmental sensing service.")
+                print("Failed to find remote service.")
 
         elif event == _IRQ_GATTC_CHARACTERISTIC_RESULT:
             # Connected device returned a characteristic.
@@ -163,7 +194,7 @@ class BLEHeadrushServant:
                 if self._conn_callback:
                     self._conn_callback()
             else:
-                print("Failed to find temperature characteristic.")
+                print("Failed to find remote characteristic.")
 
         elif event == _IRQ_GATTC_READ_RESULT:
             # A read completed successfully.
@@ -241,14 +272,15 @@ def command_received_fallback(data: bytes) -> None:
         data_str = data.decode()
         print("data: {}".format(data_str))
         message_type = b"\xB0"
-        message_control = None
-        message_control_value = None
+        # message_control = None
+        # message_control_value = None
 
         if data_str.startswith("POT"):
             values = data_str.split("|")
             message_control = int(values[1]).to_bytes(1, "big")
             message_control_value = int(values[2]).to_bytes(1, "big")
         else:
+            blink_led(2)
             command = _COMMAND_MAP.get(data_str)
             if data_str in ["button_rig_up", "button_rig_down"]:
                 message_type = b"\xC0"
@@ -256,22 +288,7 @@ def command_received_fallback(data: bytes) -> None:
             message_control = command
             message_control_value = _MIDI_MAX_VALUE_BYTES
 
-        # command = struct.unpack("I", data)[0]
-        # hex_128 = b"\x80"
-        # hex_command = hex(command)[1:]
-        # print("hex_command:{}".format(hex_command))
-
-        # hex_message = b"\x80\x80\xb0\x37\x7f"
-        # hex_message = hex_128 + hex_128 + b"\xB0" + hex_command + b"\x7f"
-        # hex_message = b"\xB0" + hex_command + b"\x7f"
-
-        # hex_message = b"\xb0\x37\x7f"
-        # print("hex_message: {}".format(hex_message))
-
-        # uart.init(31250, bits=8, parity=None, stop=1)  # init with given parameters
-        # cc_channel = 0xB0
-        # cc_channel += 0
-        print("message: {}{}{}".format(message_type, message_control, message_control_value))
+        # print("message: {}{}{}".format(message_type, message_control, message_control_value))
         _UART.write(message_type)
         _UART.write(message_control)
         _UART.write(message_control_value)
@@ -281,25 +298,20 @@ def main():
     ble = bluetooth.BLE()
     servant = BLEHeadrushServant(ble)
 
-    not_found = False
-
     def on_scan(addr_type, addr, name):
         if addr_type is not None:
             print("Remote found:", addr_type, addr, name)
             servant.connect()
         else:
-            nonlocal not_found
-            not_found = True
             print("Remote not found.")
-
-    servant.scan(callback=on_scan)
 
     # Wait for connection...
     while not servant.is_connected():
-        time.sleep_ms(100)
-        if not_found:
-            return
+        print("scanning for remote...")
+        servant.scan(callback=on_scan)
+        sleep_ms(2500)
 
+    blink_led(1, 4)
     print("Connected")
 
     # Explicitly issue reads, using "print" as the callback.
@@ -308,9 +320,9 @@ def main():
     #     time.sleep_ms(2000)
 
     # Alternative to the above, just show the most recently notified value.
-    while servant.is_connected():
-        # command_received_fallback(servant.value())
-        time.sleep_ms(100)
+    # while servant.is_connected():
+    #     # command_received_fallback(servant.value())
+    #     sleep_ms(100)
 
     print("Disconnected")
 
