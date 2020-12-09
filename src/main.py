@@ -50,6 +50,21 @@ _ENV_SENSE_SERVICE = (
 )
 
 
+_COMMAND_MAP = {
+    "button_rig_up": (49).to_bytes(1, "big"),
+    "button_rig_down": (55).to_bytes(1, "big"),
+    "button_scene1": (56).to_bytes(1, "big"),
+    "button_scene2": (57).to_bytes(1, "big"),
+    "button_scene3": (58).to_bytes(1, "big"),
+    "button_scene4": (59).to_bytes(1, "big"),
+    "button_tap_tempo": (60).to_bytes(1, "big")
+}
+
+_MIDI_MAX_VALUE_BYTES = b"FF"
+
+_UART = UART(1, 31250, tx=18, rx=19)
+
+
 class BLEHeadrushServant:
     def __init__(self, ble):
         self._ble = ble
@@ -221,23 +236,45 @@ class BLEHeadrushServant:
         return self._value
 
 
-def command_received_fallback(data) -> None:
+def command_received_fallback(data: bytes) -> None:
     if data:
-        command = struct.unpack("I", data)[0]
-        uart = UART(1, 31250, tx=18, rx=19)
-        hex_128 = b"\x80"
-        hex_command = hex(command)[1:]
-        print("hex_command:{}".format(hex_command))
+        data_str = data.decode()
+        print("data: {}".format(data_str))
+        message_type = b"\xB0"
+        message_control = None
+        message_control_value = None
+
+        if data_str.startswith("POT"):
+            values = data_str.split("|")
+            message_control = int(values[1]).to_bytes(1, "big")
+            message_control_value = int(values[2]).to_bytes(1, "big")
+        else:
+            command = _COMMAND_MAP.get(data_str)
+            if data_str in ["button_rig_up", "button_rig_down"]:
+                message_type = b"\xC0"
+
+            message_control = command
+            message_control_value = _MIDI_MAX_VALUE_BYTES
+
+        # command = struct.unpack("I", data)[0]
+        # hex_128 = b"\x80"
+        # hex_command = hex(command)[1:]
+        # print("hex_command:{}".format(hex_command))
 
         # hex_message = b"\x80\x80\xb0\x37\x7f"
         # hex_message = hex_128 + hex_128 + b"\xB0" + hex_command + b"\x7f"
         # hex_message = b"\xB0" + hex_command + b"\x7f"
-        hex_message = b"\xb0\x37\x7f"
-        print("hex_message: {}".format(hex_message))
-        uart.init(31250, bits=8, parity=None, stop=1)  # init with given parameters
-        cc_channel = 0xB0
-        cc_channel += 0
-        uart.write(hex_message)
+
+        # hex_message = b"\xb0\x37\x7f"
+        # print("hex_message: {}".format(hex_message))
+
+        # uart.init(31250, bits=8, parity=None, stop=1)  # init with given parameters
+        # cc_channel = 0xB0
+        # cc_channel += 0
+        print("message: {}{}{}".format(message_type, message_control, message_control_value))
+        _UART.write(message_type)
+        _UART.write(message_control)
+        _UART.write(message_control_value)
 
 
 def main():

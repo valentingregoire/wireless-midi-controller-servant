@@ -51,7 +51,7 @@ while True:
     if previous_pot_value not in [pot_value - 1, pot_value, pot_value + 1]:
         print(pot_value)
         uart.write(b"\xb0")
-        uart.write((61).to_bytes(1, "big"))
+        uart.write((62).to_bytes(1, "big"))
         uart.write(pot_value.to_bytes(1, "big"))
         previous_pot_value = pot_value
         # sleep_ms(10)
