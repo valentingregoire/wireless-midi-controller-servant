@@ -4,6 +4,7 @@ import time
 import bluetooth
 from machine import Pin
 from machine import UART
+import machine
 from micropython import const
 from network import WLAN
 from utime import sleep_ms
@@ -13,6 +14,8 @@ from ble_advertising import decode_services
 
 WLAN(0).active(False)
 WLAN(1).active(False)
+
+machine.freq(240000000)
 
 _MIDI_TX_PIN = 19
 
