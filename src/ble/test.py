@@ -1,3 +1,3 @@
-bytes = b'0x800x800xb00x370x80'
-print(bytes)
-print(bytes.replace("0x", "\\x"))
+bytes = b'hallo|ol|ben'
+if bytes.startswith(b"hallo"):
+    print("starts!")

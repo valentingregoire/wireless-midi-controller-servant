@@ -13,6 +13,7 @@ from utime import sleep_ms
 
 machine.freq(240000000)
 
+
 # setup access point
 ACCESS_POINT = network.WLAN(network.AP_IF)
 ACCESS_POINT.active(False)
@@ -21,11 +22,11 @@ ACCESS_POINT.config(essid="Headrush Servant", hidden=True)
 ACCESS_POINT.active(True)
 # ACCESS_POINT.config(essid="Headrush Servant", password="lol")#, hidden=True)
 
+_STATUS_LED = Pin(13, Pin.OUT, Pin.PULL_UP)
+_STATUS_LED.value(1)
+
 # some general setup
 _MIDI_TX_PIN = 19
-
-_STATUS_LED = Pin(13, Pin.OUT, Pin.PULL_UP)
-_STATUS_LED.value(0)
 
 
 _COMMAND_MAP = {
@@ -43,26 +44,18 @@ _MIDI_MAX_VALUE_BYTES = b"FF"
 _UART = UART(1, 31250, tx=18, rx=19)
 
 
-def __blink_led(status=1, times=1, interval=150) -> None:
-    """
-    Blinks the status led.
-    :param status:
-        1: blue
-        2: green
-        3: orange
-        4: red
-    :return:
-    """
-
-    for _ in range(times):
+def __blink_led(times: int, interval: int) -> None:
+    counter = 0
+    while counter < times:
         _STATUS_LED.value(1)
         sleep_ms(interval)
         _STATUS_LED.value(0)
-        sleep_ms(75)
+        sleep_ms(50)
+        counter += 1
 
 
-def blink_led(status=1, times=1, interval=100) -> None:
-    _thread.start_new_thread(__blink_led, (status, times, interval))
+def blink_led(times=1, interval=100) -> None:
+    _thread.start_new_thread(__blink_led, (times, interval))
     # __blink_led(status)
 
 
@@ -90,6 +83,26 @@ def setup_socket():
     return sock
 
 
+def send_midi(data: bytes) -> None:
+    message_type = b"\xB0"
+    if data.startswith(b"POT"):
+        values = data.split(b"|")
+        message_control = int(values[1]).to_bytes(1, "big")
+        message_control_value = int(values[2]).to_bytes(1, "big")
+    else:
+        blink_led()
+        command = _COMMAND_MAP.get(data)
+        if data in [b"button_rig_up", "button_rig_down"]:
+            message_type = b"\xC0"
+
+        message_control = command
+        message_control_value = _MIDI_MAX_VALUE_BYTES
+
+    _UART.write(message_type)
+    _UART.write(message_control)
+    _UART.write(message_control_value)
+
+
 def main() -> None:
     print("Listening for commands...")
     sock = setup_socket()
@@ -98,6 +111,11 @@ def main() -> None:
         data, addr = sock.recvfrom(1024)
         print("data: {}".format(data))
         print("addr: {}".format(addr))
+        if addr[0] == "192.168.4.2":
+            if data == b"Remote connected!":
+                blink_led(5)
+            else:
+                send_midi(data)
 
 
 if __name__ == "__main__":
