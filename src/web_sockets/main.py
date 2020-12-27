@@ -4,6 +4,7 @@ from machine import UART
 import machine
 from micropython import const
 import network
+from network import WLAN
 from utime import sleep_ms
 
 # network.WLAN(network.AP_IF).active(True)
@@ -13,11 +14,16 @@ from utime import sleep_ms
 
 machine.freq(240000000)
 
+SERVANT_IP = "192.168.169.1"
+SERVANT_PORT = 18788
+REMOTE_IP = "192.168.169.2"
+REMOTE_PORT = 11686
 
 # setup access point
-ACCESS_POINT = network.WLAN(network.AP_IF)
+ACCESS_POINT = WLAN(network.AP_IF)
 ACCESS_POINT.active(False)
-ACCESS_POINT.config(essid="Headrush Servant", hidden=True)
+ACCESS_POINT.config(essid="Headrush Servant", authmode=4, password="dunnolol", hidden=True)
+ACCESS_POINT.ifconfig((SERVANT_IP, '255.255.255.0', '192.168.178.1', '8.8.8.8'))
 # ACCESS_POINT.config(authmode=4)
 ACCESS_POINT.active(True)
 # ACCESS_POINT.config(essid="Headrush Servant", password="lol")#, hidden=True)
@@ -70,14 +76,14 @@ def setup_socket():
 
     import socket
     # addr = socket.getaddrinfo("0.0.0.0", 80)[0][-1]
-    ip = ACCESS_POINT.ifconfig()[0]
+    # ip = ACCESS_POINT.ifconfig()[0]
     # print(addr)
-    print("binding ip {}".format(ip))
+    # print("binding ip {}".format(ip))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     # sock.bind(addr)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind((ip, 10086))
+    sock.bind((SERVANT_IP, SERVANT_PORT))
     # sock.listen()
 
     return sock
@@ -108,14 +114,14 @@ def main() -> None:
     sock = setup_socket()
     while True:
         # c1, addr = sock.accept()
-        data, addr = sock.recvfrom(1024)
+        data, addr = sock.recvfrom(128)
         print("data: {}".format(data))
         print("addr: {}".format(addr))
-        if addr[0] == "192.168.4.2":
-            if data == b"Remote connected!":
-                blink_led(5)
-            else:
-                send_midi(data)
+        # if addr[0] == "192.168.4.2":
+        if data == b"Remote connected!":
+            blink_led(5)
+        else:
+            send_midi(data)
 
 
 if __name__ == "__main__":
