@@ -24,45 +24,49 @@ COMMANDS = (
     0xB0,  # Control Change
     0xC0,  # Program Change
     0xD0,  # Mono Pressure
-    0xE0  # Pich Bend
+    0xE0,  # Pich Bend
 )
 
 
 class MidiInteger:
     """A midi message sends data as 7 bit values between 0 and 127."""
+
     def __init__(self, value):
         if 0 <= value < 2 ** 7:
             self.value = value
         else:
             raise ValueError(
-                'Invalid midi data value: {}'.format(value),
-                'A midi data value must be an integer between 0 and 127')
+                "Invalid midi data value: {}".format(value),
+                "A midi data value must be an integer between 0 and 127",
+            )
 
     def __repr__(self):
-        return '<MidiInteger: {}>'.format(self.value)
+        return "<MidiInteger: {}>".format(self.value)
 
 
 class BigMidiInteger:
     """Some messages use 14 bit values, these need to be spit down to
     msb and lsb before being sent."""
+
     def __init__(self, value):
         if 0 <= value <= 2 ** 14:
             self.msb = value // 2 ** 7
             self.lsb = value % 2 ** 7
         else:
             raise ValueError(
-                'Invalid midi data value: {}'.format(value),
-                'A midi datavalue must be an integer between0'
-                ' and {}'.format(2 ** 14))
+                "Invalid midi data value: {}".format(value),
+                "A midi datavalue must be an integer between0"
+                " and {}".format(2 ** 14),
+            )
 
     def __repr__(self):
-        return '<BigMidiInteger: lsb={}, msb={}>'.format(self.lsb, self.msb)
+        return "<BigMidiInteger: lsb={}, msb={}>".format(self.lsb, self.msb)
 
 
 def send_message(self, command, data1, data2=0):
     """Send a midi message to the serial device."""
     if command not in self.COMMANDS:
-        raise ValueError('Invalid Command: {}'.format(command))
+        raise ValueError("Invalid Command: {}".format(command))
 
     command += self.channel - 1
 

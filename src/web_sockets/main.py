@@ -1,16 +1,10 @@
 import _thread
 from machine import Pin
 from machine import UART
-import machine
-from micropython import const
 import network
 from network import WLAN
 from utime import sleep_ms
 
-# network.WLAN(network.AP_IF).active(True)
-# network.WLAN(1).active(True)
-# WLAN(0).active(False)
-# WLAN(1).active(False)
 
 # machine.freq(240000000)
 
@@ -22,11 +16,11 @@ REMOTE_PORT = 11686
 # setup access point
 ACCESS_POINT = WLAN(network.AP_IF)
 ACCESS_POINT.active(False)
-ACCESS_POINT.config(essid="Headrush Servant", authmode=4, password="dunnolol", hidden=True)
-ACCESS_POINT.ifconfig((SERVANT_IP, '255.255.255.0', '192.168.178.1', '8.8.8.8'))
-# ACCESS_POINT.config(authmode=4)
+ACCESS_POINT.config(
+    essid="Headrush Servant", authmode=4, password="dG4=ZWgXDaaj2Q-5", hidden=True
+)
+ACCESS_POINT.ifconfig((SERVANT_IP, "255.255.255.0", "192.168.178.1", "8.8.8.8"))
 ACCESS_POINT.active(True)
-# ACCESS_POINT.config(essid="Headrush Servant", password="lol")#, hidden=True)
 
 _STATUS_LED = Pin(13, Pin.OUT, Pin.PULL_UP)
 _STATUS_LED.value(1)
@@ -42,7 +36,7 @@ _COMMAND_MAP = {
     b"button_scene2": (57).to_bytes(1, "big"),
     b"button_scene3": (58).to_bytes(1, "big"),
     b"button_scene4": (59).to_bytes(1, "big"),
-    b"button_tap_tempo": (60).to_bytes(1, "big")
+    b"button_tap_tempo": (60).to_bytes(1, "big"),
 }
 
 _MIDI_MAX_VALUE_BYTES = b"FF"
@@ -75,6 +69,7 @@ def setup_socket():
     # print(ACCESS_POINT.ifconfig())
 
     import socket
+
     # addr = socket.getaddrinfo("0.0.0.0", 80)[0][-1]
     # ip = ACCESS_POINT.ifconfig()[0]
     # print(addr)
