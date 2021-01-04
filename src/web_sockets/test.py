@@ -1,0 +1,1 @@
+print(int(b"RIG12".replace(b"RIG", b"")))

@@ -12,7 +12,7 @@ from utime import sleep_ms
 # WLAN(0).active(False)
 # WLAN(1).active(False)
 
-machine.freq(240000000)
+# machine.freq(240000000)
 
 SERVANT_IP = "192.168.169.1"
 SERVANT_PORT = 18788
@@ -91,22 +91,30 @@ def setup_socket():
 
 def send_midi(data: bytes) -> None:
     message_type = b"\xB0"
+    message_control_value = None
     if data.startswith(b"POT"):
         values = data.split(b"|")
         message_control = int(values[1]).to_bytes(1, "big")
         message_control_value = int(values[2]).to_bytes(1, "big")
+    elif data.startswith(b"RIG"):
+        blink_led()
+        rig = int(data.replace(b"RIG", b"")).to_bytes(1, "big")
+        message_type = b"\xC0"
+        message_control = rig
+        # message_control_value = _MIDI_MAX_VALUE_BYTES
     else:
         blink_led()
         command = _COMMAND_MAP.get(data)
-        if data in [b"button_rig_up", "button_rig_down"]:
-            message_type = b"\xC0"
+        # if data in [b"button_rig_up", "button_rig_down"]:
+        #     message_type = b"\xC0"
 
         message_control = command
         message_control_value = _MIDI_MAX_VALUE_BYTES
 
     _UART.write(message_type)
     _UART.write(message_control)
-    _UART.write(message_control_value)
+    if message_control_value:
+        _UART.write(message_control_value)
 
 
 def main() -> None:
