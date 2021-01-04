@@ -6,8 +6,6 @@ from network import WLAN
 from utime import sleep_ms
 
 
-# machine.freq(240000000)
-
 SERVANT_IP = "192.168.169.1"
 SERVANT_PORT = 18788
 REMOTE_IP = "192.168.169.2"
@@ -70,16 +68,9 @@ def setup_socket():
 
     import socket
 
-    # addr = socket.getaddrinfo("0.0.0.0", 80)[0][-1]
-    # ip = ACCESS_POINT.ifconfig()[0]
-    # print(addr)
-    # print("binding ip {}".format(ip))
-
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    # sock.bind(addr)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind((SERVANT_IP, SERVANT_PORT))
-    # sock.listen()
 
     return sock
 
@@ -96,13 +87,9 @@ def send_midi(data: bytes) -> None:
         rig = int(data.replace(b"RIG", b"")).to_bytes(1, "big")
         message_type = b"\xC0"
         message_control = rig
-        # message_control_value = _MIDI_MAX_VALUE_BYTES
     else:
         blink_led()
         command = _COMMAND_MAP.get(data)
-        # if data in [b"button_rig_up", "button_rig_down"]:
-        #     message_type = b"\xC0"
-
         message_control = command
         message_control_value = _MIDI_MAX_VALUE_BYTES
 
@@ -116,15 +103,14 @@ def main() -> None:
     print("Listening for commands...")
     sock = setup_socket()
     while True:
-        # c1, addr = sock.accept()
         data, addr = sock.recvfrom(128)
         print("data: {}".format(data))
         print("addr: {}".format(addr))
-        # if addr[0] == "192.168.4.2":
-        if data == b"Remote connected!":
-            blink_led(5)
-        else:
-            send_midi(data)
+        if addr[0] == REMOTE_IP:
+            if data == b"Remote connected!":
+                blink_led(5)
+            else:
+                send_midi(data)
 
 
 if __name__ == "__main__":
