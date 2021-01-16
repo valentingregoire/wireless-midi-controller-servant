@@ -20,11 +20,11 @@ ACCESS_POINT.config(
 ACCESS_POINT.ifconfig((SERVANT_IP, "255.255.255.0", "192.168.178.1", "8.8.8.8"))
 ACCESS_POINT.active(True)
 
-_STATUS_LED = Pin(13, Pin.OUT, Pin.PULL_UP)
+_STATUS_LED = Pin(23, Pin.OUT, Pin.PULL_UP)
 _STATUS_LED.value(1)
 
 # some general setup
-_MIDI_TX_PIN = 19
+_MIDI_TX_PIN = 18
 
 
 _COMMAND_MAP = {
